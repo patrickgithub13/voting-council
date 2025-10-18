@@ -325,6 +325,26 @@
         text-align: center;
         font-weight: 600;
       }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -402,7 +422,7 @@
 
         // Main application code
         const SCRIPT_URL =
-          "https://script.google.com/macros/s/AKfycbwEWPjcBGI9edLJAjOj-XKtPtOoZLKILRcfRxkUWpvvJE83J7onSXaMYXHMU51YPdu4/exec";
+          "https://script.google.com/macros/s/AKfycbxTTm-DxHtRpweTWdnUHJHA-LbygN281AODr17XoWz0a1xWqacc4DUEyobA9ewl2fO0gQ/exec";
 
         const positions = [
           { id: 1, title: "Chairman", maxVotes: 1 },
@@ -466,6 +486,7 @@
           verificationCode: null,
           errorMessage: null,
           successMessage: null,
+          isLoading: false,
         };
 
         function getDeviceId() {
@@ -511,6 +532,35 @@
           return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
+        async function checkEmailExists(email) {
+          try {
+            const response = await fetch(
+              `${SCRIPT_URL}?action=checkEmail&email=${encodeURIComponent(
+                email
+              )}`,
+              {
+                method: "GET",
+              }
+            );
+
+            // Check if response is ok
+            if (!response.ok) {
+              console.error("Response not ok:", response.status);
+              return false;
+            }
+
+            const text = await response.text();
+            const data = JSON.parse(text);
+
+            return data.exists === true;
+          } catch (error) {
+            console.error("Error checking email:", error);
+            // If there's an error checking, allow them to proceed
+            // The backend will do final validation
+            return false;
+          }
+        }
+
         async function sendVerificationEmail(email, code, name) {
           const emailData = {
             action: "sendVerification",
@@ -534,6 +584,9 @@
 
         window.handleLogin = async function (event) {
           event.preventDefault();
+
+          if (state.isLoading) return;
+
           const name = document.getElementById("voterName").value.trim();
           const email = document.getElementById("voterEmail").value.trim();
           const pdmId = document.getElementById("pdmId").value.trim();
@@ -558,6 +611,33 @@
           if (!pdmPattern.test(pdmId)) {
             state.errorMessage =
               "Please enter a valid PDM ID in format: PDM-XXXX-XXXXXX";
+            render();
+            return;
+          }
+
+          // Show loading state
+          state.isLoading = true;
+          render();
+
+          // Check if email has already been used
+          const emailExists = await checkEmailExists(email);
+
+          state.isLoading = false;
+
+          if (emailExists) {
+            // Show alert popup
+            alert(
+              "⚠️ VOTING NOT ALLOWED\n\nThis email address has already been used to cast a vote.\n\n" +
+                "Email: " +
+                email +
+                "\n\n" +
+                "Each email can only vote once to ensure fair elections.\n\n" +
+                "If you believe this is an error, please contact the election administrator."
+            );
+
+            // Also show error message on screen
+            state.errorMessage =
+              "❌ This email has already voted. Each email address can only vote once.";
             render();
             return;
           }
@@ -622,19 +702,33 @@
               <form onsubmit="handleLogin(event)">
                 <div class="form-group">
                   <label for="voterName">Full Name</label>
-                  <input type="text" id="voterName" placeholder="Enter your full name" required>
+                  <input type="text" id="voterName" placeholder="Enter your full name" required ${
+                    state.isLoading ? "disabled" : ""
+                  }>
                 </div>
                 <div class="form-group">
                   <label for="voterEmail">Email Address</label>
-                  <input type="email" id="voterEmail" placeholder="yourname.pdm@gmail.com" required>
+                  <input type="email" id="voterEmail" placeholder="yourname.pdm@gmail.com" required ${
+                    state.isLoading ? "disabled" : ""
+                  }>
                   <small>Must end with .pdm@gmail.com</small>
                 </div>
                 <div class="form-group">
                   <label for="pdmId">PDM ID</label>
-                  <input type="text" id="pdmId" placeholder="PDM-XXXX-XXXXXX" required>
+                  <input type="text" id="pdmId" placeholder="PDM-XXXX-XXXXXX" required ${
+                    state.isLoading ? "disabled" : ""
+                  }>
                   <small>Format: PDM-XXXX-XXXXXX (e.g., PDM-1234-567890)</small>
                 </div>
-                <button type="submit" class="submit-btn">Send Verification Code</button>
+                <button type="submit" class="submit-btn" ${
+                  state.isLoading ? "disabled" : ""
+                }>
+                  ${
+                    state.isLoading
+                      ? 'Checking...<span class="loading"></span>'
+                      : "Send Verification Code"
+                  }
+                </button>
               </form>
             </div>
           `;
@@ -772,7 +866,7 @@
               <h2>✅ Vote Submitted Successfully</h2>
               <p>Your vote has been recorded.</p>
               <p>Thank you for your participation in the election!</p>
-              <p style="font-size: 14px; color: #999; margin-top: 30px;">Each device can only vote once to ensure fairness.</p>
+              <p style="font-size: 14px; color: #999; margin-top: 30px;">Each email and device can only vote once to ensure fairness.</p>
               <button class="logout-btn" onclick="logout()" style="padding: 15px 40px; font-size: 16px; margin-top: 20px;">Return to Home</button>
             </div>
           `;
@@ -886,6 +980,7 @@
           state.verificationCode = null;
           state.errorMessage = null;
           state.successMessage = null;
+          state.isLoading = false;
           render();
         };
 
@@ -897,4 +992,3 @@
     </script>
   </body>
 </html>
-
