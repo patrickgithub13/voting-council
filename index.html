@@ -113,6 +113,21 @@
         cursor: not-allowed;
       }
 
+      .verification-notice {
+        background: #fef3c7;
+        border: 2px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .verification-notice p {
+        color: #92400e;
+        font-weight: 600;
+        margin: 0;
+      }
+
       .position-card {
         background: white;
         border-radius: 15px;
@@ -225,47 +240,6 @@
         margin-top: 15px;
       }
 
-      .results-container {
-        background: white;
-        border-radius: 15px;
-        padding: 40px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      }
-
-      .results-header {
-        text-align: center;
-        margin-bottom: 30px;
-      }
-
-      .results-header h2 {
-        font-size: 36px;
-        color: #10b981;
-        margin-bottom: 10px;
-      }
-
-      .vote-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #e5e7eb;
-      }
-
-      .vote-item:last-child {
-        border-bottom: none;
-      }
-
-      .vote-item .candidate-name {
-        font-weight: 600;
-        color: #333;
-      }
-
-      .vote-item .vote-count {
-        color: #667eea;
-        font-weight: 600;
-        font-size: 18px;
-      }
-
       .user-info {
         background: white;
         border-radius: 10px;
@@ -329,6 +303,28 @@
         margin-bottom: 15px;
         line-height: 1.6;
       }
+
+      .error-message {
+        background: #fee2e2;
+        border: 2px solid #ef4444;
+        color: #991b1b;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .success-message {
+        background: #d1fae5;
+        border: 2px solid #10b981;
+        color: #065f46;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
@@ -337,388 +333,567 @@
     </div>
 
     <script>
-      const SCRIPT_URL =
-        "https://script.google.com/macros/s/AKfycbxiWWABkOMZAiTVlFEXINON7c2YP8_YbmCkEJ3PKyAkfFeJkl1dIBWlpyGI3OqmdF34/exec";
+      (function () {
+        "use strict";
 
-      const positions = [
-        { id: 1, title: "Chairman", maxVotes: 1 },
-        { id: 2, title: "Vice Chairman", maxVotes: 1 },
-        { id: 3, title: "Secretariat", maxVotes: 1 },
-        { id: 4, title: "Finance Officer", maxVotes: 2 },
-        { id: 5, title: "Information Officer", maxVotes: 1 },
-        { id: 6, title: "Special Projects Officer", maxVotes: 1 },
-        { id: 7, title: "Ways and Means Officer", maxVotes: 1 },
-      ];
+        // Anti-debugging protection
+        const antiDebug = () => {
+          const start = new Date().getTime();
+          debugger;
+          const end = new Date().getTime();
+          if (end - start > 100) {
+            window.location.reload();
+          }
+        };
 
-      const candidates = [
-        {
-          id: 1,
-          name: "Ruskin L. Guino-o",
-          photo: "https://i.pravatar.cc/150?img=11",
-        },
-        {
-          id: 2,
-          name: "Anri Madriaga",
-          photo: "https://i.pravatar.cc/150?img=12",
-        },
-        {
-          id: 3,
-          name: "Ryan Marcly C. Lazona",
-          photo: "https://i.pravatar.cc/150?img=13",
-        },
-        {
-          id: 4,
-          name: "Julia P. Ison",
-          photo: "https://i.pravatar.cc/150?img=14",
-        },
-        {
-          id: 5,
-          name: "Daniel C. Tablante",
-          photo: "https://i.pravatar.cc/150?img=15",
-        },
-        {
-          id: 6,
-          name: "Shamilla Micka V. David",
-          photo: "https://i.pravatar.cc/150?img=16",
-        },
-        {
-          id: 7,
-          name: "Rochelle L. Malicia",
-          photo: "https://i.pravatar.cc/150?img=17",
-        },
-        {
-          id: 8,
-          name: "Eulysis Domantay",
-          photo: "https://i.pravatar.cc/150?img=18",
-        },
-      ];
+        setInterval(antiDebug, 1000);
 
-      let currentUser = null;
-      let votes = {};
-      let submitted = false;
-      let deviceId = null;
+        // Disable right-click
+        document.addEventListener("contextmenu", (e) => e.preventDefault());
 
-      function getDeviceId() {
-        let id = getCookie("deviceId");
-        if (!id) {
-          id =
-            "device_" +
-            Date.now() +
-            "_" +
-            Math.random().toString(36).substr(2, 9);
-          setCookie("deviceId", id, 365);
-        }
-        return id;
-      }
+        // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+        document.addEventListener("keydown", (e) => {
+          if (
+            e.keyCode === 123 ||
+            (e.ctrlKey &&
+              e.shiftKey &&
+              (e.keyCode === 73 || e.keyCode === 74)) ||
+            (e.ctrlKey && e.keyCode === 85)
+          ) {
+            e.preventDefault();
+            return false;
+          }
+        });
 
-      function setCookie(name, value, days) {
-        const expires = new Date(Date.now() + days * 864e5).toUTCString();
-        document.cookie =
-          name +
-          "=" +
-          encodeURIComponent(value) +
-          "; expires=" +
-          expires +
-          "; path=/";
-      }
+        // Detect DevTools
+        const detectDevTools = () => {
+          const threshold = 160;
+          if (
+            window.outerWidth - window.innerWidth > threshold ||
+            window.outerHeight - window.innerHeight > threshold
+          ) {
+            document.body.innerHTML =
+              '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-size:24px;color:white;">Developer tools detected. Please close them to continue.</div>';
+          }
+        };
 
-      function getCookie(name) {
-        return document.cookie.split("; ").reduce((r, v) => {
-          const parts = v.split("=");
-          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-        }, "");
-      }
+        setInterval(detectDevTools, 1000);
 
-      function hasVoted() {
-        return getCookie("hasVoted") === "true";
-      }
+        // Disable console
+        const disableConsole = () => {
+          const noop = () => {};
+          const methods = [
+            "log",
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "dir",
+            "trace",
+            "assert",
+            "clear",
+          ];
+          methods.forEach((method) => {
+            console[method] = noop;
+          });
+        };
 
-      function markAsVoted() {
-        setCookie("hasVoted", "true", 365);
-      }
+        disableConsole();
 
-      function handleLogin(event) {
-        event.preventDefault();
-        const name = document.getElementById("voterName").value.trim();
-        const email = document.getElementById("voterEmail").value.trim();
-        const pdmId = document.getElementById("pdmId").value.trim();
+        // Main application code
+        const SCRIPT_URL =
+          "https://script.google.com/macros/s/AKfycbwEWPjcBGI9edLJAjOj-XKtPtOoZLKILRcfRxkUWpvvJE83J7onSXaMYXHMU51YPdu4/exec";
 
-        if (!name || !email || !pdmId) {
-          alert("Please fill in all fields");
-          return;
-        }
+        const positions = [
+          { id: 1, title: "Chairman", maxVotes: 1 },
+          { id: 2, title: "Vice Chairman", maxVotes: 1 },
+          { id: 3, title: "Secretariat", maxVotes: 1 },
+          { id: 4, title: "Finance Officer", maxVotes: 2 },
+          { id: 5, title: "Information Officer", maxVotes: 1 },
+          { id: 6, title: "Special Projects Officer", maxVotes: 1 },
+          { id: 7, title: "Ways and Means Officer", maxVotes: 1 },
+        ];
 
-        if (!email.endsWith(".pdm@gmail.com")) {
-          alert("Please use a valid PDM email address ending with .pdm@gmail.com");
-          return;
-        }
+        const candidates = [
+          {
+            id: 1,
+            name: "Ruskin L. Guino-o",
+            photo: "https://i.pravatar.cc/150?img=11",
+          },
+          {
+            id: 2,
+            name: "Anri Madriaga",
+            photo: "https://i.pravatar.cc/150?img=12",
+          },
+          {
+            id: 3,
+            name: "Ryan Marcly C. Lazona",
+            photo: "https://i.pravatar.cc/150?img=13",
+          },
+          {
+            id: 4,
+            name: "Julia P. Ison",
+            photo: "https://i.pravatar.cc/150?img=14",
+          },
+          {
+            id: 5,
+            name: "Daniel C. Tablante",
+            photo: "https://i.pravatar.cc/150?img=15",
+          },
+          {
+            id: 6,
+            name: "Shamilla Micka V. David",
+            photo: "https://i.pravatar.cc/150?img=16",
+          },
+          {
+            id: 7,
+            name: "Rochelle L. Malicia",
+            photo: "https://i.pravatar.cc/150?img=17",
+          },
+          {
+            id: 8,
+            name: "Eulysis Domantay",
+            photo: "https://i.pravatar.cc/150?img=18",
+          },
+        ];
 
-        const pdmPattern = /^PDM-\d{4}-\d{6}$/;
-        if (!pdmPattern.test(pdmId)) {
-          alert("Please enter a valid PDM ID in format: PDM-XXXX-XXXXXX");
-          return;
-        }
+        let state = {
+          currentUser: null,
+          votes: {},
+          submitted: false,
+          deviceId: null,
+          pendingVerification: false,
+          verificationCode: null,
+          errorMessage: null,
+          successMessage: null,
+        };
 
-        currentUser = { name, email, pdmId };
-        deviceId = getDeviceId();
-
-        if (hasVoted()) {
-          submitted = true;
-        }
-
-        render();
-      }
-
-      function renderLogin() {
-        const app = document.getElementById("app");
-        app.innerHTML = `
-          <div class="login-container">
-            <h2>🗳️ Student Council Elections</h2>
-            <p>Cast your vote for the next student council</p>
-            <form onsubmit="handleLogin(event)">
-              <div class="form-group">
-                <label for="voterName">Full Name</label>
-                <input type="text" id="voterName" placeholder="Enter your full name" required>
-              </div>
-              <div class="form-group">
-                <label for="voterEmail">Email Address</label>
-                <input type="email" id="voterEmail" placeholder="yourname.pdm@gmail.com" required>
-                <small>Must end with .pdm@gmail.com</small>
-              </div>
-              <div class="form-group">
-                <label for="pdmId">PDM ID</label>
-                <input type="text" id="pdmId" placeholder="PDM-XXXX-XXXXXX" required>
-                <small>Format: PDM-XXXX-XXXXXX (e.g., PDM-1234-567890)</small>
-              </div>
-              <button type="submit" class="submit-btn">Continue to Vote</button>
-            </form>
-          </div>
-        `;
-      }
-
-      function render() {
-        if (!currentUser) {
-          renderLogin();
-          return;
+        function getDeviceId() {
+          let id = getCookie("deviceId");
+          if (!id) {
+            id =
+              "device_" +
+              Date.now() +
+              "_" +
+              Math.random().toString(36).substr(2, 9);
+            setCookie("deviceId", id, 365);
+          }
+          return id;
         }
 
-        const app = document.getElementById("app");
-
-        if (submitted) {
-          renderAlreadyVoted(app);
-        } else {
-          renderVoting(app);
+        function setCookie(name, value, days) {
+          const expires = new Date(Date.now() + days * 864e5).toUTCString();
+          document.cookie =
+            name +
+            "=" +
+            encodeURIComponent(value) +
+            "; expires=" +
+            expires +
+            "; path=/; SameSite=Strict; Secure";
         }
-      }
 
-      function renderVoting(container) {
-        let html = `
-          <div class="header">
-            <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
-              <div style="flex: 1;"></div>
-              <div style="flex: 1; text-align: center;">
-                <h1>🗳️ Student Council Elections</h1>
-                <p>Vote for candidates in each position</p>
-              </div>
-              <div style="flex: 1; text-align: right;">
-                <div class="user-info">
-                  <div class="user-details">
-                    <div class="user-name">${currentUser.name}</div>
-                    <div class="user-email">${currentUser.email}</div>
+        function getCookie(name) {
+          return document.cookie.split("; ").reduce((r, v) => {
+            const parts = v.split("=");
+            return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+          }, "");
+        }
+
+        function hasVoted() {
+          return getCookie("hasVoted") === "true";
+        }
+
+        function markAsVoted() {
+          setCookie("hasVoted", "true", 365);
+        }
+
+        function generateVerificationCode() {
+          return Math.floor(100000 + Math.random() * 900000).toString();
+        }
+
+        async function sendVerificationEmail(email, code, name) {
+          const emailData = {
+            action: "sendVerification",
+            email: email,
+            code: code,
+            name: name,
+          };
+
+          try {
+            await fetch(SCRIPT_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(emailData),
+            });
+            return true;
+          } catch (error) {
+            return false;
+          }
+        }
+
+        window.handleLogin = async function (event) {
+          event.preventDefault();
+          const name = document.getElementById("voterName").value.trim();
+          const email = document.getElementById("voterEmail").value.trim();
+          const pdmId = document.getElementById("pdmId").value.trim();
+
+          state.errorMessage = null;
+          state.successMessage = null;
+
+          if (!name || !email || !pdmId) {
+            state.errorMessage = "Please fill in all fields";
+            render();
+            return;
+          }
+
+          if (!email.endsWith(".pdm@gmail.com")) {
+            state.errorMessage =
+              "Please use a valid PDM email address ending with .pdm@gmail.com";
+            render();
+            return;
+          }
+
+          const pdmPattern = /^PDM-\d{4}-\d{6}$/;
+          if (!pdmPattern.test(pdmId)) {
+            state.errorMessage =
+              "Please enter a valid PDM ID in format: PDM-XXXX-XXXXXX";
+            render();
+            return;
+          }
+
+          const code = generateVerificationCode();
+          state.verificationCode = code;
+          state.currentUser = { name, email, pdmId };
+          state.deviceId = getDeviceId();
+
+          const sent = await sendVerificationEmail(email, code, name);
+
+          if (sent) {
+            state.pendingVerification = true;
+            state.successMessage = "Verification code sent to your email!";
+          } else {
+            state.errorMessage =
+              "Failed to send verification email. Please try again.";
+          }
+
+          render();
+        };
+
+        window.handleVerification = function (event) {
+          event.preventDefault();
+          const enteredCode = document
+            .getElementById("verificationCode")
+            .value.trim();
+
+          state.errorMessage = null;
+
+          if (enteredCode === state.verificationCode) {
+            state.pendingVerification = false;
+            state.verificationCode = null;
+
+            if (hasVoted()) {
+              state.submitted = true;
+            }
+
+            render();
+          } else {
+            state.errorMessage = "Invalid verification code. Please try again.";
+            render();
+          }
+        };
+
+        function renderLogin() {
+          const app = document.getElementById("app");
+          app.innerHTML = `
+            <div class="login-container">
+              <h2>🗳️ Student Council Elections</h2>
+              <p>Cast your vote for the next student council</p>
+              ${
+                state.errorMessage
+                  ? `<div class="error-message">${state.errorMessage}</div>`
+                  : ""
+              }
+              ${
+                state.successMessage
+                  ? `<div class="success-message">${state.successMessage}</div>`
+                  : ""
+              }
+              <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                  <label for="voterName">Full Name</label>
+                  <input type="text" id="voterName" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                  <label for="voterEmail">Email Address</label>
+                  <input type="email" id="voterEmail" placeholder="yourname.pdm@gmail.com" required>
+                  <small>Must end with .pdm@gmail.com</small>
+                </div>
+                <div class="form-group">
+                  <label for="pdmId">PDM ID</label>
+                  <input type="text" id="pdmId" placeholder="PDM-XXXX-XXXXXX" required>
+                  <small>Format: PDM-XXXX-XXXXXX (e.g., PDM-1234-567890)</small>
+                </div>
+                <button type="submit" class="submit-btn">Send Verification Code</button>
+              </form>
+            </div>
+          `;
+        }
+
+        function renderVerification() {
+          const app = document.getElementById("app");
+          app.innerHTML = `
+            <div class="login-container">
+              <h2>📧 Email Verification</h2>
+              <p>Enter the 6-digit code sent to ${state.currentUser.email}</p>
+              ${
+                state.errorMessage
+                  ? `<div class="error-message">${state.errorMessage}</div>`
+                  : ""
+              }
+              <form onsubmit="handleVerification(event)">
+                <div class="form-group">
+                  <label for="verificationCode">Verification Code</label>
+                  <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}" required>
+                </div>
+                <button type="submit" class="submit-btn">Verify & Continue</button>
+              </form>
+              <button class="submit-btn" onclick="logout()" style="margin-top: 15px; background: #6b7280;">Cancel</button>
+            </div>
+          `;
+        }
+
+        function render() {
+          if (!state.currentUser) {
+            renderLogin();
+            return;
+          }
+
+          if (state.pendingVerification) {
+            renderVerification();
+            return;
+          }
+
+          const app = document.getElementById("app");
+
+          if (state.submitted) {
+            renderAlreadyVoted(app);
+          } else {
+            renderVoting(app);
+          }
+        }
+
+        function renderVoting(container) {
+          let html = `
+            <div class="header">
+              <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+                <div style="flex: 1;"></div>
+                <div style="flex: 1; text-align: center;">
+                  <h1>🗳️ Student Council Elections</h1>
+                  <p>Vote for candidates in each position</p>
+                </div>
+                <div style="flex: 1; text-align: right;">
+                  <div class="user-info">
+                    <div class="user-details">
+                      <div class="user-name">${state.currentUser.name}</div>
+                      <div class="user-email">${state.currentUser.email}</div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
                   </div>
-                  <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
               </div>
             </div>
-          </div>
-        `;
+          `;
 
-        positions.forEach((position) => {
-          const selectedCandidates = votes[position.id] || [];
-          const isMultiSelect = position.maxVotes > 1;
+          positions.forEach((position) => {
+            const selectedCandidates = state.votes[position.id] || [];
+            const isMultiSelect = position.maxVotes > 1;
 
-          html += `
-            <div class="position-card">
-              <h2 class="position-title">${position.title}</h2>
-              ${
-                isMultiSelect
-                  ? `<p class="position-subtitle">Select up to ${position.maxVotes} candidates</p>`
-                  : `<p class="position-subtitle">Select 1 candidate</p>`
-              }
-              <div class="candidates-grid">
-                ${candidates
-                  .map((candidate) => {
-                    const isSelected = isMultiSelect
-                      ? selectedCandidates.includes(candidate.id)
-                      : selectedCandidates[0] === candidate.id;
+            html += `
+              <div class="position-card">
+                <h2 class="position-title">${position.title}</h2>
+                ${
+                  isMultiSelect
+                    ? `<p class="position-subtitle">Select up to ${position.maxVotes} candidates</p>`
+                    : `<p class="position-subtitle">Select 1 candidate</p>`
+                }
+                <div class="candidates-grid">
+                  ${candidates
+                    .map((candidate) => {
+                      const isSelected = isMultiSelect
+                        ? selectedCandidates.includes(candidate.id)
+                        : selectedCandidates[0] === candidate.id;
+                      const allSelectedIds = Object.values(state.votes).flat();
+                      const isDisabled =
+                        allSelectedIds.includes(candidate.id) && !isSelected;
 
-                    const allSelectedIds = Object.values(votes).flat();
-                    const isDisabled =
-                      allSelectedIds.includes(candidate.id) && !isSelected;
-
-                    return `
+                      return `
                       <button 
                         class="candidate-btn ${isSelected ? "selected" : ""}" 
                         ${isDisabled ? "disabled" : ""}
                         onclick="selectCandidate(${position.id}, ${
-                      candidate.id
-                    }, ${isMultiSelect})"
+                        candidate.id
+                      }, ${isMultiSelect})"
                       >
                         <img src="${candidate.photo}" alt="${
-                      candidate.name
-                    }" class="candidate-photo" />
+                        candidate.name
+                      }" class="candidate-photo" />
                         <div class="candidate-info">
                           <span class="candidate-name">${candidate.name}</span>
                           <span class="checkmark">✓</span>
                         </div>
                       </button>
                     `;
-                  })
-                  .join("")}
+                    })
+                    .join("")}
+                </div>
               </div>
+            `;
+          });
+
+          const totalVoted = Object.keys(state.votes).length;
+          html += `
+            <div class="submit-section">
+              <button class="submit-btn" onclick="submitVote()" ${
+                totalVoted !== positions.length ? "disabled" : ""
+              }>Submit Vote</button>
+              <p class="vote-progress">Voted: ${totalVoted} / ${
+            positions.length
+          } positions</p>
             </div>
           `;
-        });
 
-        const totalVoted = Object.keys(votes).length;
-        html += `
-          <div class="submit-section">
-            <button class="submit-btn" onclick="submitVote()" ${
-              totalVoted !== positions.length ? "disabled" : ""
-            }>Submit Vote</button>
-            <p class="vote-progress">Voted: ${totalVoted} / ${
-          positions.length
-        } positions</p>
-          </div>
-        `;
+          container.innerHTML = html;
+        }
 
-        container.innerHTML = html;
-      }
+        function renderAlreadyVoted(container) {
+          container.innerHTML = `
+            <div class="already-voted">
+              <h2>✅ Vote Submitted Successfully</h2>
+              <p>Your vote has been recorded.</p>
+              <p>Thank you for your participation in the election!</p>
+              <p style="font-size: 14px; color: #999; margin-top: 30px;">Each device can only vote once to ensure fairness.</p>
+              <button class="logout-btn" onclick="logout()" style="padding: 15px 40px; font-size: 16px; margin-top: 20px;">Return to Home</button>
+            </div>
+          `;
+        }
 
-      function renderAlreadyVoted(container) {
-        container.innerHTML = `
-          <div class="already-voted">
-            <h2>✅ Already Voted</h2>
-            <p>This device has already been used to cast a vote.</p>
-            <p>Thank you for your participation in the election!</p>
-            <p style="font-size: 14px; color: #999; margin-top: 30px;">Each device can only vote once to ensure fairness.</p>
-            <button class="logout-btn" onclick="logout()" style="padding: 15px 40px; font-size: 16px; margin-top: 20px;">Return to Home</button>
-          </div>
-        `;
-      }
+        window.selectCandidate = function (
+          positionId,
+          candidateId,
+          isMultiSelect
+        ) {
+          const position = positions.find((p) => p.id === positionId);
 
-      function selectCandidate(positionId, candidateId, isMultiSelect) {
-        const position = positions.find((p) => p.id === positionId);
+          if (isMultiSelect) {
+            if (!state.votes[positionId]) {
+              state.votes[positionId] = [];
+            }
 
-        if (isMultiSelect) {
-          if (!votes[positionId]) {
-            votes[positionId] = [];
-          }
-
-          const index = votes[positionId].indexOf(candidateId);
-          if (index > -1) {
-            votes[positionId].splice(index, 1);
-            if (votes[positionId].length === 0) {
-              delete votes[positionId];
+            const index = state.votes[positionId].indexOf(candidateId);
+            if (index > -1) {
+              state.votes[positionId].splice(index, 1);
+              if (state.votes[positionId].length === 0) {
+                delete state.votes[positionId];
+              }
+            } else {
+              if (state.votes[positionId].length < position.maxVotes) {
+                state.votes[positionId].push(candidateId);
+              } else {
+                alert(
+                  `You can only select up to ${position.maxVotes} candidates for ${position.title}`
+                );
+              }
             }
           } else {
-            if (votes[positionId].length < position.maxVotes) {
-              votes[positionId].push(candidateId);
-            } else {
-              alert(
-                `You can only select up to ${position.maxVotes} candidates for ${position.title}`
-              );
-            }
+            state.votes[positionId] = [candidateId];
           }
-        } else {
-          votes[positionId] = [candidateId];
-        }
 
-        render();
-      }
-
-      function submitVote() {
-        if (Object.keys(votes).length !== positions.length) {
-          alert("Please vote for all positions before submitting!");
-          return;
-        }
-
-        const financePosition = positions.find(
-          (p) => p.title === "Finance Officer"
-        );
-        if (financePosition && votes[financePosition.id]) {
-          if (votes[financePosition.id].length !== 2) {
-            alert("Please select exactly 2 Finance Officers!");
-            return;
-          }
-        }
-
-        const voteData = {
-          timestamp: new Date().toISOString(),
-          email: currentUser.email,
-          fullName: currentUser.name,
-          deviceId: deviceId,
-          pdmId: currentUser.pdmId,
-          chairman: votes[1]
-            ? candidates.find((c) => c.id === votes[1][0])?.name || ""
-            : "",
-          viceChairman: votes[2]
-            ? candidates.find((c) => c.id === votes[2][0])?.name || ""
-            : "",
-          secretariat: votes[3]
-            ? candidates.find((c) => c.id === votes[3][0])?.name || ""
-            : "",
-          financeOfficer1:
-            votes[4] && votes[4][0]
-              ? candidates.find((c) => c.id === votes[4][0])?.name || ""
-              : "",
-          financeOfficer2:
-            votes[4] && votes[4][1]
-              ? candidates.find((c) => c.id === votes[4][1])?.name || ""
-              : "",
-          informationOfficer: votes[5]
-            ? candidates.find((c) => c.id === votes[5][0])?.name || ""
-            : "",
-          specialProjectsOfficer: votes[6]
-            ? candidates.find((c) => c.id === votes[6][0])?.name || ""
-            : "",
-          waysAndMeansOfficer: votes[7]
-            ? candidates.find((c) => c.id === votes[7][0])?.name || ""
-            : "",
+          render();
         };
 
-        if (SCRIPT_URL !== "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-          fetch(SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(voteData),
-          })
-            .then(() => {
-              console.log("Vote submitted to Google Sheets");
-            })
-            .catch((error) => {
-              console.error("Error submitting to Google Sheets:", error);
+        window.submitVote = async function () {
+          if (Object.keys(state.votes).length !== positions.length) {
+            alert("Please vote for all positions before submitting!");
+            return;
+          }
+
+          const financePosition = positions.find(
+            (p) => p.title === "Finance Officer"
+          );
+          if (financePosition && state.votes[financePosition.id]) {
+            if (state.votes[financePosition.id].length !== 2) {
+              alert("Please select exactly 2 Finance Officers!");
+              return;
+            }
+          }
+
+          const voteData = {
+            action: "submitVote",
+            timestamp: new Date().toISOString(),
+            email: state.currentUser.email,
+            fullName: state.currentUser.name,
+            deviceId: state.deviceId,
+            pdmId: state.currentUser.pdmId,
+            chairman: state.votes[1]
+              ? candidates.find((c) => c.id === state.votes[1][0])?.name || ""
+              : "",
+            viceChairman: state.votes[2]
+              ? candidates.find((c) => c.id === state.votes[2][0])?.name || ""
+              : "",
+            secretariat: state.votes[3]
+              ? candidates.find((c) => c.id === state.votes[3][0])?.name || ""
+              : "",
+            financeOfficer1:
+              state.votes[4] && state.votes[4][0]
+                ? candidates.find((c) => c.id === state.votes[4][0])?.name || ""
+                : "",
+            financeOfficer2:
+              state.votes[4] && state.votes[4][1]
+                ? candidates.find((c) => c.id === state.votes[4][1])?.name || ""
+                : "",
+            informationOfficer: state.votes[5]
+              ? candidates.find((c) => c.id === state.votes[5][0])?.name || ""
+              : "",
+            specialProjectsOfficer: state.votes[6]
+              ? candidates.find((c) => c.id === state.votes[6][0])?.name || ""
+              : "",
+            waysAndMeansOfficer: state.votes[7]
+              ? candidates.find((c) => c.id === state.votes[7][0])?.name || ""
+              : "",
+          };
+
+          try {
+            await fetch(SCRIPT_URL, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(voteData),
             });
-        }
+          } catch (error) {
+            // Handle silently
+          }
 
-        markAsVoted();
-        submitted = true;
-        render();
-      }
+          markAsVoted();
+          state.submitted = true;
+          render();
+        };
 
-      function logout() {
-        currentUser = null;
-        votes = {};
-        render();
-      }
+        window.logout = function () {
+          state.currentUser = null;
+          state.votes = {};
+          state.pendingVerification = false;
+          state.verificationCode = null;
+          state.errorMessage = null;
+          state.successMessage = null;
+          render();
+        };
 
-      window.onload = function () {
-        deviceId = getDeviceId();
-        render();
-      };
+        window.onload = function () {
+          state.deviceId = getDeviceId();
+          render();
+        };
+      })();
     </script>
   </body>
 </html>
