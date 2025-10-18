@@ -448,6 +448,11 @@
           return;
         }
 
+        if (!email.endsWith(".pdm@gmail.com")) {
+          alert("Please use a valid PDM email address ending with .pdm@gmail.com");
+          return;
+        }
+
         const pdmPattern = /^PDM-\d{4}-\d{6}$/;
         if (!pdmPattern.test(pdmId)) {
           alert("Please enter a valid PDM ID in format: PDM-XXXX-XXXXXX");
@@ -477,7 +482,8 @@
               </div>
               <div class="form-group">
                 <label for="voterEmail">Email Address</label>
-                <input type="email" id="voterEmail" placeholder="Enter your email" required>
+                <input type="email" id="voterEmail" placeholder="yourname.pdm@gmail.com" required>
+                <small>Must end with .pdm@gmail.com</small>
               </div>
               <div class="form-group">
                 <label for="pdmId">PDM ID</label>
@@ -716,4 +722,3 @@
     </script>
   </body>
 </html>
-
