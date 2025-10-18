@@ -113,21 +113,6 @@
         cursor: not-allowed;
       }
 
-      .verification-notice {
-        background: #fef3c7;
-        border: 2px solid #f59e0b;
-        border-radius: 8px;
-        padding: 15px;
-        margin-top: 20px;
-        text-align: center;
-      }
-
-      .verification-notice p {
-        color: #92400e;
-        font-weight: 600;
-        margin: 0;
-      }
-
       .position-card {
         background: white;
         border-radius: 15px;
@@ -345,6 +330,29 @@
           transform: rotate(360deg);
         }
       }
+
+      .voting-stopped-notice {
+        background: #fee2e2;
+        border: 2px solid #ef4444;
+        border-radius: 15px;
+        padding: 40px;
+        max-width: 600px;
+        margin: 100px auto;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .voting-stopped-notice h2 {
+        color: #dc2626;
+        font-size: 32px;
+        margin-bottom: 20px;
+      }
+
+      .voting-stopped-notice p {
+        color: #991b1b;
+        font-size: 18px;
+        line-height: 1.6;
+      }
     </style>
   </head>
   <body>
@@ -356,73 +364,8 @@
       (function () {
         "use strict";
 
-        // Anti-debugging protection
-        const antiDebug = () => {
-          const start = new Date().getTime();
-          debugger;
-          const end = new Date().getTime();
-          if (end - start > 100) {
-            window.location.reload();
-          }
-        };
-
-        setInterval(antiDebug, 1000);
-
-        // Disable right-click
-        document.addEventListener("contextmenu", (e) => e.preventDefault());
-
-        // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-        document.addEventListener("keydown", (e) => {
-          if (
-            e.keyCode === 123 ||
-            (e.ctrlKey &&
-              e.shiftKey &&
-              (e.keyCode === 73 || e.keyCode === 74)) ||
-            (e.ctrlKey && e.keyCode === 85)
-          ) {
-            e.preventDefault();
-            return false;
-          }
-        });
-
-        // Detect DevTools
-        const detectDevTools = () => {
-          const threshold = 160;
-          if (
-            window.outerWidth - window.innerWidth > threshold ||
-            window.outerHeight - window.innerHeight > threshold
-          ) {
-            document.body.innerHTML =
-              '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-size:24px;color:white;">Developer tools detected. Please close them to continue.</div>';
-          }
-        };
-
-        setInterval(detectDevTools, 1000);
-
-        // Disable console
-        const disableConsole = () => {
-          const noop = () => {};
-          const methods = [
-            "log",
-            "debug",
-            "info",
-            "warn",
-            "error",
-            "dir",
-            "trace",
-            "assert",
-            "clear",
-          ];
-          methods.forEach((method) => {
-            console[method] = noop;
-          });
-        };
-
-        disableConsole();
-
-        // Main application code
         const SCRIPT_URL =
-          "https://script.google.com/macros/s/AKfycbw5hoFPdQGnQmDZnplD2DF5haAtHvjm4qGrAP6OhRu9e3KQaVs3DA5bJVAfuL7amC3GAg/exec";
+          "https://script.google.com/macros/s/AKfycbzS3P9ba_OXO6SdEmHqBEQVi4RVkSHa_TJVuXlbAqpucxaaYA9xiuTJlxOkla2bgkmKSw/exec";
 
         const positions = [
           { id: 1, title: "Chairman", maxVotes: 1 },
@@ -486,7 +429,24 @@
           errorMessage: null,
           successMessage: null,
           isLoading: false,
+          votingStopped: false,
         };
+
+        // Check voting status on page load
+        async function checkVotingStatus() {
+          try {
+            const response = await fetch(
+              `${SCRIPT_URL}?action=checkVotingStatus`,
+              {
+                method: "GET",
+              }
+            );
+            const data = await response.json();
+            state.votingStopped = data.votingStopped || false;
+          } catch (error) {
+            console.error("Error checking voting status:", error);
+          }
+        }
 
         function generateVerificationCode() {
           return Math.floor(100000 + Math.random() * 900000).toString();
@@ -503,20 +463,14 @@
               }
             );
 
-            // Check if response is ok
             if (!response.ok) {
-              console.error("Response not ok:", response.status);
               return false;
             }
 
-            const text = await response.text();
-            const data = JSON.parse(text);
-
+            const data = await response.json();
             return data.exists === true;
           } catch (error) {
             console.error("Error checking email:", error);
-            // If there's an error checking, allow them to proceed
-            // The backend will do final validation
             return false;
           }
         }
@@ -530,14 +484,17 @@
           };
 
           try {
-            await fetch(SCRIPT_URL, {
+            const response = await fetch(SCRIPT_URL, {
               method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "text/plain" },
               body: JSON.stringify(emailData),
             });
+
+            // Wait for response
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             return true;
           } catch (error) {
+            console.error("Error sending verification:", error);
             return false;
           }
         }
@@ -546,6 +503,16 @@
           event.preventDefault();
 
           if (state.isLoading) return;
+
+          // Check voting status first
+          await checkVotingStatus();
+
+          if (state.votingStopped) {
+            state.errorMessage =
+              "Voting has been temporarily stopped by the administrator. Please try again later.";
+            render();
+            return;
+          }
 
           const name = document.getElementById("voterName").value.trim();
           const email = document.getElementById("voterEmail").value.trim();
@@ -575,17 +542,13 @@
             return;
           }
 
-          // Show loading state
           state.isLoading = true;
           render();
 
-          // Check if email has already been used
           const emailExists = await checkEmailExists(email);
 
-          state.isLoading = false;
-
           if (emailExists) {
-            // Show alert popup
+            state.isLoading = false;
             alert(
               "⚠️ VOTING NOT ALLOWED\n\nThis email address has already been used to cast a vote.\n\n" +
                 "Email: " +
@@ -595,7 +558,6 @@
                 "If you believe this is an error, please contact the election administrator."
             );
 
-            // Also show error message on screen
             state.errorMessage =
               "❌ This email has already voted. Each email address can only vote once.";
             render();
@@ -608,12 +570,17 @@
 
           const sent = await sendVerificationEmail(email, code, name);
 
+          state.isLoading = false;
+
           if (sent) {
             state.pendingVerification = true;
-            state.successMessage = "Verification code sent to your email!";
+            state.successMessage =
+              "Verification code sent to your email! Please check your inbox.";
           } else {
             state.errorMessage =
               "Failed to send verification email. Please try again.";
+            state.currentUser = null;
+            state.verificationCode = null;
           }
 
           render();
@@ -627,18 +594,78 @@
 
           state.errorMessage = null;
 
+          if (!enteredCode) {
+            state.errorMessage = "Please enter the verification code.";
+            render();
+            return;
+          }
+
+          if (enteredCode.length !== 6) {
+            state.errorMessage = "Verification code must be 6 digits.";
+            render();
+            return;
+          }
+
           if (enteredCode === state.verificationCode) {
             state.pendingVerification = false;
             state.verificationCode = null;
+            state.successMessage =
+              "Email verified! You can now proceed to vote.";
             render();
           } else {
-            state.errorMessage = "Invalid verification code. Please try again.";
+            state.errorMessage =
+              "Invalid verification code. Please check your email and try again.";
             render();
           }
         };
 
+        window.resendVerificationCode = async function () {
+          if (state.isLoading) return;
+
+          state.isLoading = true;
+          state.errorMessage = null;
+          state.successMessage = null;
+          render();
+
+          const newCode = generateVerificationCode();
+          state.verificationCode = newCode;
+
+          const sent = await sendVerificationEmail(
+            state.currentUser.email,
+            newCode,
+            state.currentUser.name
+          );
+
+          state.isLoading = false;
+
+          if (sent) {
+            state.successMessage =
+              "New verification code sent! Please check your email.";
+          } else {
+            state.errorMessage =
+              "Failed to resend verification code. Please try again.";
+          }
+
+          render();
+        };
+
         function renderLogin() {
           const app = document.getElementById("app");
+
+          if (state.votingStopped) {
+            app.innerHTML = `
+              <div class="voting-stopped-notice">
+                <h2>⏸️ Voting Temporarily Stopped</h2>
+                <p>The voting system has been temporarily stopped by the administrator.</p>
+                <p>Please check back later or contact the election administrator for more information.</p>
+                <button class="submit-btn" onclick="location.reload()" style="margin-top: 30px; max-width: 200px; margin-left: auto; margin-right: auto;">
+                  Refresh Page
+                </button>
+              </div>
+            `;
+            return;
+          }
+
           app.innerHTML = `
             <div class="login-container">
               <h2>🗳️ Council of Leaders Elections</h2>
@@ -679,7 +706,7 @@
                 }>
                   ${
                     state.isLoading
-                      ? 'Checking...<span class="loading"></span>'
+                      ? 'Processing...<span class="loading"></span>'
                       : "Send Verification Code"
                   }
                 </button>
@@ -693,20 +720,66 @@
           app.innerHTML = `
             <div class="login-container">
               <h2>📧 Email Verification</h2>
-              <p>Enter the 6-digit code sent to ${state.currentUser.email}</p>
+              <p>A 6-digit verification code has been sent to:</p>
+              <p style="font-weight: 600; color: #667eea; margin-bottom: 20px;">${
+                state.currentUser.email
+              }</p>
+              <p style="font-size: 14px; color: #666; margin-bottom: 20px;">Please check your inbox (and spam folder) for the code.</p>
               ${
                 state.errorMessage
                   ? `<div class="error-message">${state.errorMessage}</div>`
                   : ""
               }
+              ${
+                state.successMessage
+                  ? `<div class="success-message">${state.successMessage}</div>`
+                  : ""
+              }
               <form onsubmit="handleVerification(event)">
                 <div class="form-group">
                   <label for="verificationCode">Verification Code</label>
-                  <input type="text" id="verificationCode" placeholder="Enter 6-digit code" maxlength="6" pattern="[0-9]{6}" required>
+                  <input 
+                    type="text" 
+                    id="verificationCode" 
+                    placeholder="Enter 6-digit code" 
+                    maxlength="6" 
+                    pattern="[0-9]{6}" 
+                    inputmode="numeric"
+                    autocomplete="off"
+                    required
+                    ${state.isLoading ? "disabled" : ""}
+                  >
+                  <small>Enter the 6-digit code from your email</small>
                 </div>
-                <button type="submit" class="submit-btn">Verify & Continue</button>
+                <button type="submit" class="submit-btn" ${
+                  state.isLoading ? "disabled" : ""
+                }>
+                  ${
+                    state.isLoading
+                      ? 'Processing...<span class="loading"></span>'
+                      : "Verify & Continue to Vote"
+                  }
+                </button>
               </form>
-              <button class="submit-btn" onclick="logout()" style="margin-top: 15px; background: #6b7280;">Cancel</button>
+              <button 
+                class="submit-btn" 
+                onclick="resendVerificationCode()" 
+                style="margin-top: 15px; background: #10b981;"
+                ${state.isLoading ? "disabled" : ""}
+              >
+                ${state.isLoading ? "Sending..." : "📧 Resend Code"}
+              </button>
+              <button 
+                class="submit-btn" 
+                onclick="logout()" 
+                style="margin-top: 10px; background: #6b7280;"
+                ${state.isLoading ? "disabled" : ""}
+              >
+                Cancel
+              </button>
+              <p style="font-size: 12px; color: #999; margin-top: 20px; text-align: center;">
+                Didn't receive the email? Check your spam folder or click "Resend Code"
+              </p>
             </div>
           `;
         }
@@ -876,6 +949,17 @@
             }
           }
 
+          // Check voting status before submitting
+          await checkVotingStatus();
+
+          if (state.votingStopped) {
+            alert(
+              "Voting has been stopped. Your vote cannot be submitted at this time."
+            );
+            render();
+            return;
+          }
+
           const voteData = {
             action: "submitVote",
             timestamp: new Date().toISOString(),
@@ -913,12 +997,14 @@
           try {
             await fetch(SCRIPT_URL, {
               method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "text/plain" },
               body: JSON.stringify(voteData),
             });
+
+            // Wait a moment for processing
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           } catch (error) {
-            // Handle silently
+            console.error("Error submitting vote:", error);
           }
 
           state.submitted = true;
@@ -936,7 +1022,8 @@
           render();
         };
 
-        window.onload = function () {
+        window.onload = async function () {
+          await checkVotingStatus();
           render();
         };
       })();
