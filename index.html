@@ -353,6 +353,35 @@
         font-size: 18px;
         line-height: 1.6;
       }
+
+      .devtools-warning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+        color: #ef4444;
+      }
+
+      .devtools-warning-content {
+        text-align: center;
+        padding: 40px;
+      }
+
+      .devtools-warning h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+      }
+
+      .devtools-warning p {
+        font-size: 20px;
+        color: #999;
+      }
     </style>
   </head>
   <body>
@@ -363,6 +392,140 @@
     <script>
       (function () {
         "use strict";
+
+        // ============================================
+        // ENHANCED DEVTOOLS PROTECTION
+        // ============================================
+
+        // Disable right-click
+        document.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
+          return false;
+        });
+
+        // Disable keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+          if (
+            e.key === "F12" ||
+            (e.ctrlKey &&
+              e.shiftKey &&
+              (e.key === "I" || e.key === "J" || e.key === "C")) ||
+            (e.ctrlKey && e.key === "u") ||
+            (e.metaKey &&
+              e.shiftKey &&
+              (e.key === "I" || e.key === "J" || e.key === "C")) ||
+            (e.metaKey && e.key === "u")
+          ) {
+            e.preventDefault();
+            return false;
+          }
+        });
+
+        // Disable text selection
+        document.addEventListener("selectstart", (e) => {
+          e.preventDefault();
+          return false;
+        });
+
+        // Detect DevTools - Multiple methods
+        let devtoolsOpen = false;
+
+        function showDevToolsWarning() {
+          if (!devtoolsOpen) {
+            devtoolsOpen = true;
+            document.body.innerHTML = `
+              <div class="devtools-warning">
+                <div class="devtools-warning-content">
+                  <h1>⚠️ Access Restricted</h1>
+                  <p>Developer tools detected.</p>
+                  <p>Please close them and refresh the page.</p>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        // Method 1: Window size detection
+        const checkWindowSize = () => {
+          const threshold = 160;
+          if (
+            window.outerWidth - window.innerWidth > threshold ||
+            window.outerHeight - window.innerHeight > threshold
+          ) {
+            showDevToolsWarning();
+          }
+        };
+
+        // Method 2: DevTools object detection
+        const devtoolsDetector = /./;
+        devtoolsDetector.toString = function () {
+          showDevToolsWarning();
+          return "devtools";
+        };
+
+        // Method 3: Performance timing
+        const checkPerformance = () => {
+          const start = performance.now();
+          debugger;
+          const end = performance.now();
+          if (end - start > 100) {
+            showDevToolsWarning();
+          }
+        };
+
+        // Method 4: Console detection
+        const element = new Image();
+        Object.defineProperty(element, "id", {
+          get: function () {
+            showDevToolsWarning();
+            return "devtools";
+          },
+        });
+
+        // Run checks
+        setInterval(checkWindowSize, 500);
+        setInterval(checkPerformance, 1000);
+        setInterval(() => {
+          console.log(devtoolsDetector);
+          console.clear();
+        }, 100);
+
+        // Disable console
+        const noop = () => {};
+        const consoleMethods = [
+          "log",
+          "warn",
+          "error",
+          "info",
+          "debug",
+          "trace",
+          "dir",
+          "dirxml",
+          "group",
+          "groupEnd",
+          "time",
+          "timeEnd",
+          "assert",
+          "clear",
+          "table",
+        ];
+        consoleMethods.forEach((method) => {
+          window.console[method] = noop;
+        });
+
+        // Prevent console reopening
+        Object.freeze(console);
+
+        // Debugger traps
+        setInterval(() => {
+          (function () {
+            return false;
+          })["constructor"]("debugger")();
+        }, 50);
+
+        // ============================================
+        // APPLICATION CODE
+        // ============================================
 
         const SCRIPT_URL =
           "https://script.google.com/macros/s/AKfycbzS3P9ba_OXO6SdEmHqBEQVi4RVkSHa_TJVuXlbAqpucxaaYA9xiuTJlxOkla2bgkmKSw/exec";
@@ -432,7 +595,6 @@
           votingStopped: false,
         };
 
-        // Check voting status on page load
         async function checkVotingStatus() {
           try {
             const response = await fetch(
@@ -444,7 +606,7 @@
             const data = await response.json();
             state.votingStopped = data.votingStopped || false;
           } catch (error) {
-            console.error("Error checking voting status:", error);
+            // Error handling
           }
         }
 
@@ -470,7 +632,6 @@
             const data = await response.json();
             return data.exists === true;
           } catch (error) {
-            console.error("Error checking email:", error);
             return false;
           }
         }
@@ -490,11 +651,9 @@
               body: JSON.stringify(emailData),
             });
 
-            // Wait for response
             await new Promise((resolve) => setTimeout(resolve, 1000));
             return true;
           } catch (error) {
-            console.error("Error sending verification:", error);
             return false;
           }
         }
@@ -504,7 +663,6 @@
 
           if (state.isLoading) return;
 
-          // Check voting status first
           await checkVotingStatus();
 
           if (state.votingStopped) {
@@ -949,7 +1107,6 @@
             }
           }
 
-          // Check voting status before submitting
           await checkVotingStatus();
 
           if (state.votingStopped) {
@@ -1001,10 +1158,9 @@
               body: JSON.stringify(voteData),
             });
 
-            // Wait a moment for processing
             await new Promise((resolve) => setTimeout(resolve, 1000));
           } catch (error) {
-            console.error("Error submitting vote:", error);
+            // Error handling
           }
 
           state.submitted = true;
