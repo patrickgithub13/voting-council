@@ -422,7 +422,7 @@
 
         // Main application code
         const SCRIPT_URL =
-          "https://script.google.com/macros/s/AKfycbxTTm-DxHtRpweTWdnUHJHA-LbygN281AODr17XoWz0a1xWqacc4DUEyobA9ewl2fO0gQ/exec";
+          "https://script.google.com/macros/s/AKfycbw5hoFPdQGnQmDZnplD2DF5haAtHvjm4qGrAP6OhRu9e3KQaVs3DA5bJVAfuL7amC3GAg/exec";
 
         const positions = [
           { id: 1, title: "Chairman", maxVotes: 1 },
@@ -481,52 +481,12 @@
           currentUser: null,
           votes: {},
           submitted: false,
-          deviceId: null,
           pendingVerification: false,
           verificationCode: null,
           errorMessage: null,
           successMessage: null,
           isLoading: false,
         };
-
-        function getDeviceId() {
-          let id = getCookie("deviceId");
-          if (!id) {
-            id =
-              "device_" +
-              Date.now() +
-              "_" +
-              Math.random().toString(36).substr(2, 9);
-            setCookie("deviceId", id, 365);
-          }
-          return id;
-        }
-
-        function setCookie(name, value, days) {
-          const expires = new Date(Date.now() + days * 864e5).toUTCString();
-          document.cookie =
-            name +
-            "=" +
-            encodeURIComponent(value) +
-            "; expires=" +
-            expires +
-            "; path=/; SameSite=Strict; Secure";
-        }
-
-        function getCookie(name) {
-          return document.cookie.split("; ").reduce((r, v) => {
-            const parts = v.split("=");
-            return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-          }, "");
-        }
-
-        function hasVoted() {
-          return getCookie("hasVoted") === "true";
-        }
-
-        function markAsVoted() {
-          setCookie("hasVoted", "true", 365);
-        }
 
         function generateVerificationCode() {
           return Math.floor(100000 + Math.random() * 900000).toString();
@@ -645,7 +605,6 @@
           const code = generateVerificationCode();
           state.verificationCode = code;
           state.currentUser = { name, email, pdmId };
-          state.deviceId = getDeviceId();
 
           const sent = await sendVerificationEmail(email, code, name);
 
@@ -671,11 +630,6 @@
           if (enteredCode === state.verificationCode) {
             state.pendingVerification = false;
             state.verificationCode = null;
-
-            if (hasVoted()) {
-              state.submitted = true;
-            }
-
             render();
           } else {
             state.errorMessage = "Invalid verification code. Please try again.";
@@ -866,7 +820,7 @@
               <h2>✅ Vote Submitted Successfully</h2>
               <p>Your vote has been recorded.</p>
               <p>Thank you for your participation in the election!</p>
-              <p style="font-size: 14px; color: #999; margin-top: 30px;">Each email and device can only vote once to ensure fairness.</p>
+              <p style="font-size: 14px; color: #999; margin-top: 30px;">Each email can only vote once to ensure fairness.</p>
               <button class="logout-btn" onclick="logout()" style="padding: 15px 40px; font-size: 16px; margin-top: 20px;">Return to Home</button>
             </div>
           `;
@@ -927,7 +881,6 @@
             timestamp: new Date().toISOString(),
             email: state.currentUser.email,
             fullName: state.currentUser.name,
-            deviceId: state.deviceId,
             pdmId: state.currentUser.pdmId,
             chairman: state.votes[1]
               ? candidates.find((c) => c.id === state.votes[1][0])?.name || ""
@@ -968,7 +921,6 @@
             // Handle silently
           }
 
-          markAsVoted();
           state.submitted = true;
           render();
         };
@@ -985,7 +937,6 @@
         };
 
         window.onload = function () {
-          state.deviceId = getDeviceId();
           render();
         };
       })();
