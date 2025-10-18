@@ -726,12 +726,16 @@
           state.verificationCode = code;
           state.currentUser = { name, email, pdmId };
 
+          // Set pending verification BEFORE sending email
+          state.pendingVerification = true;
+          state.successMessage = "Sending verification code...";
+          render();
+
           const sent = await sendVerificationEmail(email, code, name);
 
           state.isLoading = false;
 
           if (sent) {
-            state.pendingVerification = true;
             state.successMessage =
               "Verification code sent to your email! Please check your inbox.";
           } else {
@@ -739,6 +743,7 @@
               "Failed to send verification email. Please try again.";
             state.currentUser = null;
             state.verificationCode = null;
+            state.pendingVerification = false;
           }
 
           render();
