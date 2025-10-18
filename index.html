@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Voting System</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        color: white;
+        margin-bottom: 40px;
+      }
+
+      .header h1 {
+        font-size: 42px;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .login-container {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        max-width: 500px;
+        margin: 100px auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .login-container h2 {
+        font-size: 32px;
+        color: #333;
+        margin-bottom: 15px;
+        text-align: center;
+      }
+
+      .login-container p {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 16px;
+        text-align: center;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-group small {
+        color: #666;
+        font-size: 13px;
+        display: block;
+        margin-top: 5px;
+      }
+
+      .submit-btn {
+        width: 100%;
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .submit-btn:hover:not(:disabled) {
+        background: #5568d3;
+        transform: translateY(-2px);
+      }
+
+      .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .position-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .position-title {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #667eea;
+      }
+
+      .position-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+
+      .candidates-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+      }
+
+      .candidate-btn {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        position: relative;
+        text-align: left;
+      }
+
+      .candidate-btn:hover:not(:disabled) {
+        border-color: #667eea;
+        background: #f0f4ff;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      .candidate-btn.selected {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .candidate-btn:disabled {
+        background: #f5f5f5;
+        border-color: #e0e0e0;
+        color: #999;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .candidate-photo {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #ddd;
+        flex-shrink: 0;
+      }
+
+      .candidate-btn.selected .candidate-photo {
+        border-color: white;
+      }
+
+      .candidate-info {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .candidate-name {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .checkmark {
+        display: none;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+      }
+
+      .candidate-btn.selected .checkmark {
+        display: inline;
+      }
+
+      .submit-section {
+        text-align: center;
+        margin-top: 40px;
+      }
+
+      .vote-progress {
+        color: white;
+        font-size: 18px;
+        margin-top: 15px;
+      }
+
+      .results-container {
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .results-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .results-header h2 {
+        font-size: 36px;
+        color: #10b981;
+        margin-bottom: 10px;
+      }
+
+      .vote-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .vote-item:last-child {
+        border-bottom: none;
+      }
+
+      .vote-item .candidate-name {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .vote-item .vote-count {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 18px;
+      }
+
+      .user-info {
+        background: white;
+        border-radius: 10px;
+        padding: 15px 25px;
+        display: inline-flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .user-details {
+        text-align: left;
+      }
+
+      .user-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 16px;
+      }
+
+      .user-email {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .logout-btn {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .logout-btn:hover {
+        background: #dc2626;
+      }
+
+      .already-voted {
+        background: white;
+        border-radius: 15px;
+        padding: 60px 40px;
+        max-width: 600px;
+        margin: 100px auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
+
+      .already-voted h2 {
+        font-size: 32px;
+        color: #ef4444;
+        margin-bottom: 20px;
+      }
+
+      .already-voted p {
+        color: #666;
+        font-size: 18px;
+        margin-bottom: 15px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="app"></div>
+    </div>
+
+    <script>
+      const SCRIPT_URL =
+        "https://script.google.com/macros/s/AKfycbxiWWABkOMZAiTVlFEXINON7c2YP8_YbmCkEJ3PKyAkfFeJkl1dIBWlpyGI3OqmdF34/exec";
+
+      const positions = [
+        { id: 1, title: "Chairman", maxVotes: 1 },
+        { id: 2, title: "Vice Chairman", maxVotes: 1 },
+        { id: 3, title: "Secretariat", maxVotes: 1 },
+        { id: 4, title: "Finance Officer", maxVotes: 2 },
+        { id: 5, title: "Information Officer", maxVotes: 1 },
+        { id: 6, title: "Special Projects Officer", maxVotes: 1 },
+        { id: 7, title: "Ways and Means Officer", maxVotes: 1 },
+      ];
+
+      const candidates = [
+        {
+          id: 1,
+          name: "Ruskin L. Guino-o",
+          photo: "https://i.pravatar.cc/150?img=11",
+        },
+        {
+          id: 2,
+          name: "Anri Madriaga",
+          photo: "https://i.pravatar.cc/150?img=12",
+        },
+        {
+          id: 3,
+          name: "Ryan Marcly C. Lazona",
+          photo: "https://i.pravatar.cc/150?img=13",
+        },
+        {
+          id: 4,
+          name: "Julia P. Ison",
+          photo: "https://i.pravatar.cc/150?img=14",
+        },
+        {
+          id: 5,
+          name: "Daniel C. Tablante",
+          photo: "https://i.pravatar.cc/150?img=15",
+        },
+        {
+          id: 6,
+          name: "Shamilla Micka V. David",
+          photo: "https://i.pravatar.cc/150?img=16",
+        },
+        {
+          id: 7,
+          name: "Rochelle L. Malicia",
+          photo: "https://i.pravatar.cc/150?img=17",
+        },
+        {
+          id: 8,
+          name: "Eulysis Domantay",
+          photo: "https://i.pravatar.cc/150?img=18",
+        },
+      ];
+
+      let currentUser = null;
+      let votes = {};
+      let submitted = false;
+      let deviceId = null;
+
+      function getDeviceId() {
+        let id = getCookie("deviceId");
+        if (!id) {
+          id =
+            "device_" +
+            Date.now() +
+            "_" +
+            Math.random().toString(36).substr(2, 9);
+          setCookie("deviceId", id, 365);
+        }
+        return id;
+      }
+
+      function setCookie(name, value, days) {
+        const expires = new Date(Date.now() + days * 864e5).toUTCString();
+        document.cookie =
+          name +
+          "=" +
+          encodeURIComponent(value) +
+          "; expires=" +
+          expires +
+          "; path=/";
+      }
+
+      function getCookie(name) {
+        return document.cookie.split("; ").reduce((r, v) => {
+          const parts = v.split("=");
+          return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        }, "");
+      }
+
+      function hasVoted() {
+        // return getCookie("hasVoted") === "true";
+      }
+
+      function markAsVoted() {
+        setCookie("hasVoted", "true", 365);
+      }
+
+      function handleLogin(event) {
+        event.preventDefault();
+        const name = document.getElementById("voterName").value.trim();
+        const email = document.getElementById("voterEmail").value.trim();
+        const pdmId = document.getElementById("pdmId").value.trim();
+
+        if (!name || !email || !pdmId) {
+          alert("Please fill in all fields");
+          return;
+        }
+
+        const pdmPattern = /^PDM-\d{4}-\d{6}$/;
+        if (!pdmPattern.test(pdmId)) {
+          alert("Please enter a valid PDM ID in format: PDM-XXXX-XXXXXX");
+          return;
+        }
+
+        currentUser = { name, email, pdmId };
+        deviceId = getDeviceId();
+
+        if (hasVoted()) {
+          submitted = true;
+        }
+
+        render();
+      }
+
+      function renderLogin() {
+        const app = document.getElementById("app");
+        app.innerHTML = `
+          <div class="login-container">
+            <h2>🗳️ Student Council Elections</h2>
+            <p>Cast your vote for the next student council</p>
+            <form onsubmit="handleLogin(event)">
+              <div class="form-group">
+                <label for="voterName">Full Name</label>
+                <input type="text" id="voterName" placeholder="Enter your full name" required>
+              </div>
+              <div class="form-group">
+                <label for="voterEmail">Email Address</label>
+                <input type="email" id="voterEmail" placeholder="Enter your email" required>
+              </div>
+              <div class="form-group">
+                <label for="pdmId">PDM ID</label>
+                <input type="text" id="pdmId" placeholder="PDM-XXXX-XXXXXX" required>
+                <small>Format: PDM-XXXX-XXXXXX (e.g., PDM-1234-567890)</small>
+              </div>
+              <button type="submit" class="submit-btn">Continue to Vote</button>
+            </form>
+          </div>
+        `;
+      }
+
+      function render() {
+        if (!currentUser) {
+          renderLogin();
+          return;
+        }
+
+        const app = document.getElementById("app");
+
+        if (submitted) {
+          renderAlreadyVoted(app);
+        } else {
+          renderVoting(app);
+        }
+      }
+
+      function renderVoting(container) {
+        let html = `
+          <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+              <div style="flex: 1;"></div>
+              <div style="flex: 1; text-align: center;">
+                <h1>🗳️ Student Council Elections</h1>
+                <p>Vote for candidates in each position</p>
+              </div>
+              <div style="flex: 1; text-align: right;">
+                <div class="user-info">
+                  <div class="user-details">
+                    <div class="user-name">${currentUser.name}</div>
+                    <div class="user-email">${currentUser.email}</div>
+                  </div>
+                  <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        positions.forEach((position) => {
+          const selectedCandidates = votes[position.id] || [];
+          const isMultiSelect = position.maxVotes > 1;
+
+          html += `
+            <div class="position-card">
+              <h2 class="position-title">${position.title}</h2>
+              ${
+                isMultiSelect
+                  ? `<p class="position-subtitle">Select up to ${position.maxVotes} candidates</p>`
+                  : `<p class="position-subtitle">Select 1 candidate</p>`
+              }
+              <div class="candidates-grid">
+                ${candidates
+                  .map((candidate) => {
+                    const isSelected = isMultiSelect
+                      ? selectedCandidates.includes(candidate.id)
+                      : selectedCandidates[0] === candidate.id;
+
+                    const allSelectedIds = Object.values(votes).flat();
+                    const isDisabled =
+                      allSelectedIds.includes(candidate.id) && !isSelected;
+
+                    return `
+                      <button 
+                        class="candidate-btn ${isSelected ? "selected" : ""}" 
+                        ${isDisabled ? "disabled" : ""}
+                        onclick="selectCandidate(${position.id}, ${
+                      candidate.id
+                    }, ${isMultiSelect})"
+                      >
+                        <img src="${candidate.photo}" alt="${
+                      candidate.name
+                    }" class="candidate-photo" />
+                        <div class="candidate-info">
+                          <span class="candidate-name">${candidate.name}</span>
+                          <span class="checkmark">✓</span>
+                        </div>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </div>
+          `;
+        });
+
+        const totalVoted = Object.keys(votes).length;
+        html += `
+          <div class="submit-section">
+            <button class="submit-btn" onclick="submitVote()" ${
+              totalVoted !== positions.length ? "disabled" : ""
+            }>Submit Vote</button>
+            <p class="vote-progress">Voted: ${totalVoted} / ${
+          positions.length
+        } positions</p>
+          </div>
+        `;
+
+        container.innerHTML = html;
+      }
+
+      function renderAlreadyVoted(container) {
+        container.innerHTML = `
+          <div class="already-voted">
+            <h2>✅ Already Voted</h2>
+            <p>This device has already been used to cast a vote.</p>
+            <p>Thank you for your participation in the election!</p>
+            <p style="font-size: 14px; color: #999; margin-top: 30px;">Each device can only vote once to ensure fairness.</p>
+            <button class="logout-btn" onclick="logout()" style="padding: 15px 40px; font-size: 16px; margin-top: 20px;">Return to Home</button>
+          </div>
+        `;
+      }
+
+      function selectCandidate(positionId, candidateId, isMultiSelect) {
+        const position = positions.find((p) => p.id === positionId);
+
+        if (isMultiSelect) {
+          if (!votes[positionId]) {
+            votes[positionId] = [];
+          }
+
+          const index = votes[positionId].indexOf(candidateId);
+          if (index > -1) {
+            votes[positionId].splice(index, 1);
+            if (votes[positionId].length === 0) {
+              delete votes[positionId];
+            }
+          } else {
+            if (votes[positionId].length < position.maxVotes) {
+              votes[positionId].push(candidateId);
+            } else {
+              alert(
+                `You can only select up to ${position.maxVotes} candidates for ${position.title}`
+              );
+            }
+          }
+        } else {
+          votes[positionId] = [candidateId];
+        }
+
+        render();
+      }
+
+      function submitVote() {
+        if (Object.keys(votes).length !== positions.length) {
+          alert("Please vote for all positions before submitting!");
+          return;
+        }
+
+        const financePosition = positions.find(
+          (p) => p.title === "Finance Officer"
+        );
+        if (financePosition && votes[financePosition.id]) {
+          if (votes[financePosition.id].length !== 2) {
+            alert("Please select exactly 2 Finance Officers!");
+            return;
+          }
+        }
+
+        const voteData = {
+          timestamp: new Date().toISOString(),
+          email: currentUser.email,
+          fullName: currentUser.name,
+          deviceId: deviceId,
+          pdmId: currentUser.pdmId,
+          chairman: votes[1]
+            ? candidates.find((c) => c.id === votes[1][0])?.name || ""
+            : "",
+          viceChairman: votes[2]
+            ? candidates.find((c) => c.id === votes[2][0])?.name || ""
+            : "",
+          secretariat: votes[3]
+            ? candidates.find((c) => c.id === votes[3][0])?.name || ""
+            : "",
+          financeOfficer1:
+            votes[4] && votes[4][0]
+              ? candidates.find((c) => c.id === votes[4][0])?.name || ""
+              : "",
+          financeOfficer2:
+            votes[4] && votes[4][1]
+              ? candidates.find((c) => c.id === votes[4][1])?.name || ""
+              : "",
+          informationOfficer: votes[5]
+            ? candidates.find((c) => c.id === votes[5][0])?.name || ""
+            : "",
+          specialProjectsOfficer: votes[6]
+            ? candidates.find((c) => c.id === votes[6][0])?.name || ""
+            : "",
+          waysAndMeansOfficer: votes[7]
+            ? candidates.find((c) => c.id === votes[7][0])?.name || ""
+            : "",
+        };
+
+        if (SCRIPT_URL !== "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+          fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(voteData),
+          })
+            .then(() => {
+              console.log("Vote submitted to Google Sheets");
+            })
+            .catch((error) => {
+              console.error("Error submitting to Google Sheets:", error);
+            });
+        }
+
+        markAsVoted();
+        submitted = true;
+        render();
+      }
+
+      function logout() {
+        currentUser = null;
+        votes = {};
+        render();
+      }
+
+      window.onload = function () {
+        deviceId = getDeviceId();
+        render();
+      };
+    </script>
+  </body>
+</html>
