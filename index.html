@@ -727,7 +727,7 @@
           state.currentUser = { name, email, pdmId };
 
           // Set pending verification BEFORE sending email
-          state.pendingVerification = true;
+          state.pendingVerification = false;
           state.successMessage = "Sending verification code...";
           render();
 
@@ -1191,6 +1191,7 @@
     </script>
   </body>
 </html>
+
 
 
 
